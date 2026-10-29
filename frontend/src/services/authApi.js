@@ -1,6 +1,7 @@
 
 const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api"
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000/api"
 ).replace(/\/+$/, "");
 
 async function sendAuthRequest(endpoint, data) {
@@ -15,7 +16,9 @@ async function sendAuthRequest(endpoint, data) {
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok || !result.success) {
-    throw new Error(result.message || "Request complete nahi ho paayi");
+    throw new Error(
+      result.message || "Request complete nahi ho paayi"
+    );
   }
 
   return result;
