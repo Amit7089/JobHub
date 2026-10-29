@@ -17,7 +17,7 @@ async function sendAuthRequest(endpoint, data) {
 
   if (!response.ok || !result.success) {
     throw new Error(
-      result.message || "Request complete nahi ho paayi"
+      result.message || `Request failed (${response.status})`
     );
   }
 
