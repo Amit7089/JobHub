@@ -1,8 +1,8 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ShieldCheck,
-  LogIn,
   LogOut,
   Plus,
   Pencil,
@@ -18,7 +18,6 @@ import {
   Globe,
   CalendarDays,
   MapPin,
-  Image as ImageIcon,
   Search,
 } from "lucide-react";
 
@@ -133,11 +132,27 @@ function StatusBadge({ job }) {
   );
 }
 
-/* --------------------------------------------------
-   JOB FORM
--------------------------------------------------- */
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-slate-500">{label}</p>
+        <span className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600">
+          {icon}
+        </span>
+      </div>
+      <p className="mt-4 text-3xl font-bold text-slate-900">{value}</p>
+    </div>
+  );
+}
 
-function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
+function JobForm({
+  initialJob,
+  defaultJobType,
+  token,
+  onClose,
+  onSaved,
+}) {
   const [form, setForm] = useState(() => {
     if (!initialJob) {
       return {
@@ -198,11 +213,7 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
     const file = event.target.files?.[0] || null;
 
     if (file) {
-      const allowedTypes = [
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ];
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
       if (!allowedTypes.includes(file.type)) {
         setError("Sirf JPG, PNG ya WEBP image upload karein.");
@@ -238,7 +249,9 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
         if (key === "expiresAt") {
           payload.append(
             key,
-            value ? new Date(`${value}T23:59:59`).toISOString() : ""
+            value
+              ? new Date(`${value}T23:59:59`).toISOString()
+              : ""
           );
         } else {
           payload.append(key, value ?? "");
@@ -296,7 +309,10 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="space-y-5 p-5 sm:p-6">
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            >
               {error}
             </div>
           )}
@@ -324,8 +340,8 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
             </label>
 
             <p className="mt-2 text-xs leading-5 text-slate-600">
-              Premium jobs membership section ke liye hain. Public jobs
-              sabhi users ke All Jobs page par dikhane ke liye hain.
+              Premium jobs membership section ke liye hain. Public
+              jobs sabhi users ke All Jobs page par dikhane ke liye hain.
             </p>
           </div>
 
@@ -418,7 +434,6 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
             <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
               <label className="block text-sm font-semibold text-slate-800">
                 Walk-in poster image
-
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -501,8 +516,14 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
               disabled={saving}
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
             >
-              {saving && <RefreshCw size={16} className="animate-spin" />}
-              {saving ? "Saving..." : initialJob ? "Save changes" : "Save draft"}
+              {saving && (
+                <RefreshCw size={16} className="animate-spin" />
+              )}
+              {saving
+                ? "Saving..."
+                : initialJob
+                  ? "Save changes"
+                  : "Save draft"}
             </button>
           </div>
         </form>
@@ -511,38 +532,14 @@ function JobForm({ initialJob, defaultJobType, token, onClose, onSaved }) {
   );
 }
 
-/* --------------------------------------------------
-   STAT CARD
--------------------------------------------------- */
-
-function StatCard({ icon, label, value }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-slate-500">{label}</p>
-        <span className="rounded-xl bg-indigo-50 p-2.5 text-indigo-600">
-          {icon}
-        </span>
-      </div>
-      <p className="mt-4 text-3xl font-bold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-/* --------------------------------------------------
-   MAIN ADMIN
--------------------------------------------------- */
-
 export default function Admin() {
+  const navigate = useNavigate();
+
   const [token, setToken] = useState(
     () => sessionStorage.getItem("jobhub_admin_token") || ""
   );
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [editingJob, setEditingJob] = useState(null);
@@ -550,17 +547,19 @@ export default function Admin() {
   const [activeSection, setActiveSection] = useState("premium");
   const [search, setSearch] = useState("");
 
-  function logout() {
+  const logout = useCallback(() => {
     sessionStorage.removeItem("jobhub_admin_token");
+    sessionStorage.removeItem("jobhub_admin");
     setToken("");
     setJobs([]);
     setEditingJob(null);
     setFormOpen(false);
     setNotice("");
     setError("");
-  }
+    navigate("/login", { replace: true });
+  }, [navigate]);
 
-  async function loadJobs(activeToken = token) {
+  const loadJobs = useCallback(async (activeToken = token) => {
     if (!activeToken) return;
 
     setLoading(true);
@@ -588,36 +587,16 @@ export default function Admin() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, logout]);
 
   useEffect(() => {
-    if (token) loadJobs(token);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function handleLogin(event) {
-    event.preventDefault();
-    setLoginLoading(true);
-    setError("");
-
-    try {
-      const result = await apiRequest("/admin/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
-
-      sessionStorage.setItem("jobhub_admin_token", result.token);
-      setToken(result.token);
-      setPassword("");
-      setNotice("Admin login successful.");
-
-      await loadJobs(result.token);
-    } catch (err) {
-      setError(err.message || "Login nahi ho paaya.");
-    } finally {
-      setLoginLoading(false);
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
     }
-  }
+
+    loadJobs(token);
+  }, [token, navigate, loadJobs]);
 
   function openNewJobForm() {
     setEditingJob(null);
@@ -642,13 +621,16 @@ export default function Admin() {
     setNotice("");
 
     try {
-      const result = await apiRequest(`/admin/jobs/${job._id}/publish`, {
-        token,
-        method: "PATCH",
-      });
+      const result = await apiRequest(
+        `/admin/jobs/${job._id}/publish`,
+        {
+          token,
+          method: "PATCH",
+        }
+      );
 
       setNotice(result.message || "Job publish ho gayi.");
-      await loadJobs();
+      await loadJobs(token);
     } catch (err) {
       setError(err.message || "Job publish nahi ho paayi.");
     }
@@ -671,7 +653,7 @@ export default function Admin() {
       });
 
       setNotice(result.message || "Job delete ho gayi.");
-      await loadJobs();
+      await loadJobs(token);
     } catch (err) {
       setError(err.message || "Job delete nahi ho paayi.");
     }
@@ -682,7 +664,7 @@ export default function Admin() {
     setEditingJob(null);
     setNotice(message);
     setError("");
-    await loadJobs();
+    await loadJobs(token);
   }
 
   const premiumJobs = useMemo(
@@ -730,78 +712,13 @@ export default function Admin() {
       (!job.expiresAt || new Date(job.expiresAt) > new Date())
   ).length;
 
-  const draftCount = jobs.filter((job) => job.status === "draft").length;
-
   if (!token) {
     return (
-      <main className="flex min-h-[75vh] items-center justify-center bg-slate-50 px-4 py-12">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
-            <ShieldCheck size={32} className="text-indigo-600" />
-          </div>
-
-          <div className="mt-5 text-center">
-            <p className="text-sm font-semibold tracking-wide text-indigo-600">
-              JOBHUB ADMIN
-            </p>
-            <h1 className="mt-2 text-2xl font-bold text-slate-900">
-              Admin Login
-            </h1>
-            <p className="mt-2 text-sm text-slate-500">
-              Dashboard access karne ke liye login karein.
-            </p>
-          </div>
-
-          {error && (
-            <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <label className="block text-sm font-medium text-slate-700">
-              Admin email
-              <input
-                required
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                placeholder="admin@example.com"
-              />
-            </label>
-
-            <label className="block text-sm font-medium text-slate-700">
-              Password
-              <input
-                required
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                placeholder="Enter admin password"
-              />
-            </label>
-
-            <button
-              type="submit"
-              disabled={loginLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {loginLoading ? (
-                <RefreshCw size={18} className="animate-spin" />
-              ) : (
-                <LogIn size={18} />
-              )}
-              {loginLoading ? "Signing in..." : "Login securely"}
-            </button>
-          </form>
-
-          <p className="mt-5 text-center text-xs leading-5 text-slate-500">
-            Admin credentials backend environment variables se aate hain.
+      <main className="flex min-h-[70vh] items-center justify-center bg-slate-50 px-4">
+        <div className="text-center">
+          <RefreshCw className="mx-auto animate-spin text-indigo-600" size={28} />
+          <p className="mt-3 text-sm text-slate-500">
+            Common login page khol rahe hain...
           </p>
         </div>
       </main>
@@ -811,13 +728,11 @@ export default function Admin() {
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Dashboard header */}
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white">
               <ShieldCheck size={25} />
             </div>
-
             <div>
               <p className="text-sm font-semibold text-indigo-600">
                 JOBHUB CONTROL PANEL
@@ -831,7 +746,7 @@ export default function Admin() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => loadJobs()}
+              onClick={() => loadJobs(token)}
               disabled={loading}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
             >
@@ -869,13 +784,15 @@ export default function Admin() {
         )}
 
         {error && (
-          <div className="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div
+            role="alert"
+            className="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
             <AlertCircle size={18} className="mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* Statistics */}
         <section className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             icon={<BriefcaseBusiness size={22} />}
@@ -899,7 +816,6 @@ export default function Admin() {
           />
         </section>
 
-        {/* Two main sections */}
         <section className="mt-8 grid gap-5 md:grid-cols-2">
           <button
             type="button"
@@ -921,7 +837,6 @@ export default function Admin() {
                 MEMBERSHIP
               </span>
             </div>
-
             <h2 className="mt-4 text-xl font-bold text-slate-900">
               Premium Jobs
             </h2>
@@ -956,12 +871,11 @@ export default function Admin() {
                 ALL USERS
               </span>
             </div>
-
             <h2 className="mt-4 text-xl font-bold text-slate-900">
               Public Jobs
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Aisi jobs jo bina membership ke All Jobs page par dikhengi.
+              Bina membership ke All Jobs page par dikhne wali jobs.
             </p>
             <p className="mt-4 text-2xl font-extrabold text-emerald-700">
               {publicJobs.length}
@@ -972,7 +886,6 @@ export default function Admin() {
           </button>
         </section>
 
-        {/* Walk-in remains a separate existing section */}
         <button
           type="button"
           onClick={() => {
@@ -991,7 +904,7 @@ export default function Admin() {
           <div className="min-w-0 flex-1">
             <h2 className="font-bold text-slate-900">Walk-in Jobs</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Existing walk-in job listing aur poster manage karein.
+              Walk-in job listings aur posters manage karein.
             </p>
           </div>
           <span className="text-lg font-bold text-orange-700">
@@ -999,7 +912,6 @@ export default function Admin() {
           </span>
         </button>
 
-        {/* Job management */}
         <section className="mt-8 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5 sm:p-6">
             <div>
@@ -1028,11 +940,16 @@ export default function Admin() {
               className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
             >
               <Plus size={18} />
-              Add {activeSection === "public" ? "Public" : activeSection === "walkin" ? "Walk-in" : "Premium"} Job
+              Add{" "}
+              {activeSection === "public"
+                ? "Public"
+                : activeSection === "walkin"
+                  ? "Walk-in"
+                  : "Premium"}{" "}
+              Job
             </button>
           </div>
 
-          {/* Section tabs */}
           <div className="flex flex-wrap gap-2 border-b border-slate-100 p-4 sm:px-5">
             {[
               { id: "premium", label: "Premium Jobs", icon: Crown },
@@ -1116,7 +1033,9 @@ export default function Admin() {
                         <p className="font-semibold text-slate-900">
                           {job.title}
                         </p>
-                        <p className="mt-1 text-slate-600">{job.company}</p>
+                        <p className="mt-1 text-slate-600">
+                          {job.company}
+                        </p>
                         <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                           <MapPin size={12} />
                           {job.location || "Location not specified"}

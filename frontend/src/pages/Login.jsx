@@ -23,10 +23,34 @@ export default function Login() {
         password,
       });
 
-      sessionStorage.setItem("jobhub_user_token", result.token);
-      sessionStorage.setItem("jobhub_user", JSON.stringify(result.user));
+      if (!result?.success || !result?.token || !result?.user) {
+        throw new Error("Login response sahi nahi hai. Dobara try karein.");
+      }
 
-      navigate("/dashboard", { replace: true });
+      const role = result.user.role;
+
+      if (role === "admin") {
+        sessionStorage.removeItem("jobhub_user_token");
+        sessionStorage.removeItem("jobhub_user");
+
+        sessionStorage.setItem("jobhub_admin_token", result.token);
+        sessionStorage.setItem(
+          "jobhub_admin",
+          JSON.stringify(result.user)
+        );
+
+        navigate("/admin", { replace: true });
+      } else if (role === "user") {
+        sessionStorage.removeItem("jobhub_admin_token");
+        sessionStorage.removeItem("jobhub_admin");
+
+        sessionStorage.setItem("jobhub_user_token", result.token);
+        sessionStorage.setItem("jobhub_user", JSON.stringify(result.user));
+
+        navigate("/dashboard", { replace: true });
+      } else {
+        throw new Error("Account role verify nahi ho paaya.");
+      }
     } catch (err) {
       setError(err.message || "Login nahi ho paaya.");
     } finally {
@@ -35,7 +59,7 @@ export default function Login() {
   }
 
   const fieldClass =
-    "w-full rounded-xl border border-slate-200 py-3 pl-11 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
+    "w-full rounded-xl border border-slate-200 py-3 pl-11 pr-12 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100";
 
   return (
     <main className="flex min-h-[80vh] items-center justify-center bg-slate-50 px-4 py-10">
@@ -45,17 +69,22 @@ export default function Login() {
         </div>
 
         <div className="mt-5 text-center">
-          <p className="text-sm font-semibold text-indigo-600">WELCOME BACK</p>
+          <p className="text-sm font-semibold text-indigo-600">
+            WELCOME BACK
+          </p>
           <h1 className="mt-2 text-2xl font-bold text-slate-900">
             Login to JobHub
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Apne account mein login karke job updates dekhein.
+            Admin ya User, apne account se login karein.
           </p>
         </div>
 
         {error && (
-          <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div
+            role="alert"
+            className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
             {error}
           </div>
         )}
@@ -64,11 +93,14 @@ export default function Login() {
           <label className="block text-sm font-medium text-slate-700">
             Email address
             <span className="relative mt-1 block">
-              <Mail className="absolute left-3 top-3.5 text-slate-400" size={18} />
+              <Mail
+                className="absolute left-3 top-3.5 text-slate-400"
+                size={18}
+              />
               <input
                 required
                 type="email"
-                autoComplete="email"
+                autoComplete="username"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
@@ -80,7 +112,10 @@ export default function Login() {
           <label className="block text-sm font-medium text-slate-700">
             Password
             <span className="relative mt-1 block">
-              <Lock className="absolute left-3 top-3.5 text-slate-400" size={18} />
+              <Lock
+                className="absolute left-3 top-3.5 text-slate-400"
+                size={18}
+              />
               <input
                 required
                 type={showPassword ? "text" : "password"}
@@ -88,7 +123,7 @@ export default function Login() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Enter your password"
-                className={`${fieldClass} pr-12`}
+                className={fieldClass}
               />
               <button
                 type="button"
@@ -112,14 +147,17 @@ export default function Login() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-600">
-          Don't have an account?{" "}
-          <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-700">
+          Don&apos;t have an account?{" "}
+          <Link
+            to="/register"
+            className="font-semibold text-indigo-600 hover:text-indigo-700"
+          >
             Sign up
           </Link>
         </p>
 
         <p className="mt-4 text-center text-xs text-slate-400">
-          Password bhool gaye? Password reset feature hum baad mein add kar sakte hain.
+          Aapke account ke role ke hisaab se dashboard khulega.
         </p>
       </div>
     </main>

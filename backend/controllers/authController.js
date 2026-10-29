@@ -14,7 +14,7 @@ function createToken(user) {
       role: "user",
     },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    { expiresIn: "7d", algorithm: "HS256" }
   );
 }
 
@@ -31,7 +31,6 @@ function validEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// Register a new user
 async function register(req, res) {
   try {
     const { name, email, password } = req.body || {};
@@ -113,14 +112,16 @@ async function register(req, res) {
   }
 }
 
-// Login an existing user
 async function login(req, res) {
   try {
     const { email, password } = req.body || {};
 
     if (
       typeof email !== "string" ||
-      typeof password !== "string"
+      typeof password !== "string" ||
+      !email.trim() ||
+      !password ||
+      password.length > 72
     ) {
       return res.status(400).json({
         success: false,
@@ -129,8 +130,49 @@ async function login(req, res) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const jwtSecret = process.env.JWT_SECRET;
 
-    if (!validEmail(cleanEmail) || password.length > 72) {
+    if (!jwtSecret) {
+      throw new Error("JWT_SECRET is not configured");
+    }
+
+    // Admin credentials are verified only on the backend.
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      throw new Error("Admin authentication is not configured");
+    }
+
+    if (
+      cleanEmail === adminEmail.trim().toLowerCase() &&
+      password === adminPassword
+    ) {
+      const token = jwt.sign(
+        {
+          role: "admin",
+          email: cleanEmail,
+        },
+        jwtSecret,
+        {
+          expiresIn: "8h",
+          algorithm: "HS256",
+        }
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Admin login successful",
+        token,
+        user: {
+          email: cleanEmail,
+          role: "admin",
+        },
+      });
+    }
+
+    // Otherwise, verify a normal registered user.
+    if (!validEmail(cleanEmail)) {
       return res.status(401).json({
         success: false,
         message: "Email ya password galat hai",
@@ -161,7 +203,7 @@ async function login(req, res) {
 
     const token = createToken(user);
 
-    return res.json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
       token,
